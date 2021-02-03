@@ -123,7 +123,7 @@ my_plot(t_up, s, 0, [1, 0, -1], "data after pulse")
 # %% channel
 noise = np.random.normal()
 r= np.add(s,noise)
-#r=s
+r=s
 # %% matched filter
 if(pulse_shape == RECT_PULSE):
     x = np.convolve(r, h_rect, mode='same')
@@ -139,11 +139,22 @@ z = x[0::us_factor]
 my_plot(t, z, 1, [min(z), max(z)], "data after downsampling")   
 
 # %% decision
+if(mod_type == UNIPOLAR):
+    #for i in range(N):
+    print("todo")
+        
+
 if(mod_type == BIPOLAR):
-    dec = np.sign(z)
+    for i in range(N):
+        if(z[i] < 0):
+            z[i] = 0
+        else:
+            z[i] = 1
+    #dec = np.sign(z)
 
 
-my_plot(t, dec, 1, [-1, 1], "data after dec")   
+my_plot(t, z, 1, [-1, 1], "data after dec")   
+my_plot(t, bin_seq, 1, [min(bin_seq), max(bin_seq)], "binary sequence")
 
 # %% performance
 
