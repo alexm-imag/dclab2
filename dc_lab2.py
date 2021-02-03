@@ -19,8 +19,30 @@ BIPOLAR = 1
 RECT_PULSE = 0
 RRC_PULSE = 1
 
+# %% Setting up parameters
+N = 10000
+us_factor=8
+mod_type = UNIPOLAR
+pulse_shape = RECT_PULSE
+alpha = 0.5
+
+bin_seq = np.random.randint(2, size=N)
+t = np.arange(0, N)
+t_up = np.arange(0, N * us_factor)
+
+Eb_N0 = 5
+
+if N > 100:
+    NOPLOTS = 1
+else:
+    NOPLOT = 0
+
 # %% Functions
 def my_plot(t, data, stem, yaxis, title):
+    
+    if(NOPLOTS == 1):
+        return
+    
     plt.figure(figsize=(7,2))
     plt.yticks(yaxis)
     if(stem > 0):
@@ -77,19 +99,6 @@ def rrc(t, alpha, T=1):
                                        + (1-2/np.pi)*np.cos(np.pi/(4*a)))
     return h
 
-# %% Setting up parameters
-N = 30
-us_factor=8
-mod_type = BIPOLAR
-pulse_shape = RECT_PULSE
-alpha = 0.5
-
-bin_seq = np.random.randint(2, size=N)
-t = np.arange(0, N)
-t_up = np.arange(0, N * us_factor)
-
-Eb_N0 = 2
-
 # %% filter coefficients
 h_rect = np.ones(us_factor)     
 h_rrc = rrc(t, alpha, us_factor)
@@ -123,7 +132,7 @@ my_plot(t_up, s, 0, [1, 0, -1], "data after pulse")
 # %% channel
 noise = np.random.normal()
 r= np.add(s,noise)
-r=s
+#r=s
 # %% matched filter
 if(pulse_shape == RECT_PULSE):
     x = np.convolve(r, h_rect, mode='same')
@@ -133,31 +142,52 @@ if(pulse_shape == RRC_PULSE):
 
 my_plot(t_up, x, 0, [min(x), max(x)], "data after mf")   
 
+# normalize x
+xnorm = x / max(x)
+
 # %% down sampling
-z = x[0::us_factor]
+z = xnorm[0::us_factor]
 
 my_plot(t, z, 1, [min(z), max(z)], "data after downsampling")   
 
 # %% decision
+
+# normalize z?
+
+# decide using euclidean distance: min{sqrt((1 - z)^2),sqrt((0 - z)^2)}
+dec = np.zeros(N)
+
 if(mod_type == UNIPOLAR):
-    #for i in range(N):
-    print("todo")
-        
+    for i in range(N):
+        if np.sqrt((1 - z[i])**2) < np.sqrt((0 - z[i])**2):
+            dec[i] = 1
+        else:
+            dec[i] = 0
+            
 
 if(mod_type == BIPOLAR):
     for i in range(N):
-        if(z[i] < 0):
-            z[i] = 0
+        if np.sqrt((1 - z[i])**2) < np.sqrt((-1 - z[i])**2):
+            dec[i] = 1
         else:
-            z[i] = 1
-    #dec = np.sign(z)
+            dec[i] = 0
+            
 
 
-my_plot(t, z, 1, [-1, 1], "data after dec")   
-my_plot(t, bin_seq, 1, [min(bin_seq), max(bin_seq)], "binary sequence")
+my_plot(t, dec, 1, [min(dec), max(dec)], "data after dec")   
+my_plot(t, bin_seq, 1, [0 , 1], "generated bin_seq")    
 
 # %% performance
+err = 0
+for i in range(N):
+    if dec[i] != bin_seq[i]:
+        err = err +1
+        
+BER = err / N        
 
-
+print("sequence length:", N)
+print("Eb_N0: ", Eb_N0)
+print("errors: ", err)
+print("BER: ", BER)
 
 # %% plots
