@@ -23,19 +23,19 @@ RRC_PULSE = 1
 N = 10000
 us_factor=8
 mod_type = UNIPOLAR
-pulse_shape = RECT_PULSE
+pulse_shape = RRC_PULSE
 alpha = 0.5
 
 bin_seq = np.random.randint(2, size=N)
 t = np.arange(0, N)
 t_up = np.arange(0, N * us_factor)
 
-Eb_N0 = 5
+Eb_N0 = 10
 
 if N > 100:
     NOPLOTS = 1
 else:
-    NOPLOT = 0
+    NOPLOTS = 0
 
 # %% Functions
 def my_plot(t, data, stem, yaxis, title):
@@ -101,7 +101,10 @@ def rrc(t, alpha, T=1):
 
 # %% filter coefficients
 h_rect = np.ones(us_factor)     
-h_rrc = rrc(t, alpha, us_factor)
+t_rrc = np.arange(-N/2, N/2)
+h_rrc = rrc(t_rrc, alpha, us_factor)
+
+#my_plot(t_rrc, h_rrc, 0, [min(h_rrc), max(h_rrc)], "h_rrc")
 
 # %% modulation
 if(mod_type == UNIPOLAR):
@@ -117,7 +120,7 @@ upsampled_data = np.zeros(us_factor * N)
 upsampled_data[0::us_factor] = mod_data[::]
 
 
-my_plot(t, upsampled_data[0:N], 1, [-1, 0 , 1], "data after sampling")    
+my_plot(t_up, upsampled_data, 1, [-1, 0 , 1], "data after upsampling")    
 
 # %% Pulse Shaping
 
@@ -127,11 +130,12 @@ if(pulse_shape == RECT_PULSE):
 if(pulse_shape == RRC_PULSE):
     s = np.convolve(upsampled_data, h_rrc, mode='same')
     
-my_plot(t_up, s, 0, [1, 0, -1], "data after pulse")    
+my_plot(t_up, s, 0, [1, 0, -1], "data after pulse shaping")    
 
 # %% channel
-noise = np.random.normal()
-r= np.add(s,noise)
+test = ( 10*np.log10(Eb_N0))
+noise = np.random.normal(size = N * us_factor) * (1 / test)
+r = np.add(s,noise)
 #r=s
 # %% matched filter
 if(pulse_shape == RECT_PULSE):
@@ -151,9 +155,6 @@ z = xnorm[0::us_factor]
 my_plot(t, z, 1, [min(z), max(z)], "data after downsampling")   
 
 # %% decision
-
-# normalize z?
-
 # decide using euclidean distance: min{sqrt((1 - z)^2),sqrt((0 - z)^2)}
 dec = np.zeros(N)
 
@@ -174,7 +175,7 @@ if(mod_type == BIPOLAR):
             
 
 
-my_plot(t, dec, 1, [min(dec), max(dec)], "data after dec")   
+my_plot(t, dec, 1, [min(dec), max(dec)], "data after decision")   
 my_plot(t, bin_seq, 1, [0 , 1], "generated bin_seq")    
 
 # %% performance
@@ -191,3 +192,24 @@ print("errors: ", err)
 print("BER: ", BER)
 
 # %% plots
+c = round(N/us_factor)
+
+if(NOPLOTS == 0):
+    for i in range(c):
+        plt.plot(x[i * us_factor ::(i+1) * us_factor])
+         
+    plt.xlim(0, us_factor )
+    plt.ylim(min(x), max(x))
+    plt.xlabel('n')
+    plt.ylabel('x[n]')
+    plt.title('eye diagram')
+    plt.grid(True)
+    plt.show()
+ 
+
+    
+
+
+
+
+
